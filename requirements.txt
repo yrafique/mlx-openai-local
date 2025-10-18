@@ -1,0 +1,42 @@
+# MLX Omni Server - OpenAI-compatible API with 99% function calling accuracy
+mlx-omni-server>=0.3.4
+
+# LangChain integration
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-openai>=0.1.0
+langgraph>=0.0.40
+
+# UI
+streamlit>=1.30.0
+
+# MLX dependencies (mlx-omni-server already includes mlx and mlx-lm)
+huggingface_hub>=0.20.0
+
+# Utilities
+python-dotenv>=1.0.0
+requests>=2.31.0
+pydantic>=2.5.0
+
+# Web search and data tools
+duckduckgo-search>=4.0.0
+
+# Data visualization and charting
+matplotlib>=3.7.0
+pandas>=2.0.0
+plotly>=5.17.0
+openpyxl>=3.1.0
+
+# Voice capabilities
+pyttsx3>=2.90
+openai-whisper>=20230314
+
+# Image processing
+Pillow>=10.0.0
+
+# Code execution and analysis
+numpy>=1.24.0
+
+# Testing
+pytest>=7.4.0
+httpx>=0.26.0

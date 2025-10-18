@@ -1,0 +1,30 @@
+{
+  "model": "mlx-community/Qwen2.5-3B-Instruct-4bit",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What's the weather in Ottawa right now?"
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather_enhanced",
+        "description": "Get current weather with a synthesized, easy-to-read answer. Returns current conditions, temperature, feels like, and more for any location.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "location": {
+              "type": "string",
+              "description": "City name or location (e.g., 'Ottawa', 'New York', 'London')"
+            }
+          },
+          "required": ["location"]
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "max_tokens": 200
+}
