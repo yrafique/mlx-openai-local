@@ -16,6 +16,7 @@ try:
     from .table_formatter import TABLE_FORMATTER_TOOL_DEFINITIONS, execute_table_formatter_tool
     from .voice import VOICE_TOOL_DEFINITIONS, execute_voice_tool
     from .file_analysis import FILE_ANALYSIS_TOOL_DEFINITIONS, execute_file_tool
+    from .rag import RAG_TOOL_DEFINITIONS, execute_rag_tool
 except ImportError:
     # Fall back to absolute imports (when run directly)
     from code_execution import CODE_EXECUTION_TOOL_DEFINITIONS, execute_code_tool
@@ -25,6 +26,7 @@ except ImportError:
     from table_formatter import TABLE_FORMATTER_TOOL_DEFINITIONS, execute_table_formatter_tool
     from voice import VOICE_TOOL_DEFINITIONS, execute_voice_tool
     from file_analysis import FILE_ANALYSIS_TOOL_DEFINITIONS, execute_file_tool
+    from rag import RAG_TOOL_DEFINITIONS, execute_rag_tool
 
 
 class ToolsRegistry:
@@ -84,6 +86,13 @@ class ToolsRegistry:
                 "icon": "📁",
                 "tools": FILE_ANALYSIS_TOOL_DEFINITIONS,
                 "executor": execute_file_tool
+            },
+            "rag": {
+                "name": "Knowledge Base (RAG)",
+                "description": "Ingest documents/YouTube, query knowledge base (inspired by chat-with-mlx)",
+                "icon": "🧠",
+                "tools": RAG_TOOL_DEFINITIONS,
+                "executor": execute_rag_tool
             }
         }
 

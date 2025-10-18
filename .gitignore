@@ -68,3 +68,6 @@ htmlcov/
 
 # MLX cache
 .mlx/
+
+# ChromaDB vector database
+chroma_db/

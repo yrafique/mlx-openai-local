@@ -7,6 +7,9 @@ Production-quality OpenAI-compatible local LLM serving system for Apple Silicon 
 - **99% Function Calling Accuracy** - Industry-leading tool calling with Qwen2.5-3B and Llama3.2-3B
 - **OpenAI-Compatible API** - Drop-in replacement for OpenAI SDK and LangChain
 - **Apple Silicon Optimized** - Native MLX acceleration for M1/M2/M3/M4 chips
+- **RAG (Retrieval Augmented Generation)** 🧠 - Document ingestion (PDF/TXT/MD) + YouTube transcripts + vector search (NEW!)
+- **Advanced Model Management** 📊 - Memory estimation, performance tracking (tokens/sec, TTFT) (NEW!)
+- **Comprehensive Tools** - Web search, financial data, code execution, file analysis, voice transcription
 - **LangChain Ready** - Seamless integration with LangChain agents and tools
 - **Streamlit Control Panel** - Web UI for monitoring and testing
 - **Zero Configuration** - One command to start serving
