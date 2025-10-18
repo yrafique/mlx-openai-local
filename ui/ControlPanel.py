@@ -235,6 +235,21 @@ with st.sidebar:
     # Current model info
     if model_loaded:
         st.success(f"**Active Model:**\n\n`{current_model}`")
+
+        # Performance metrics (if available)
+        try:
+            perf_stats = model_manager.get_performance_stats()
+            if perf_stats.get("loaded"):
+                last_gen = perf_stats.get("last_generation", {})
+                tps = last_gen.get("tokens_per_second", 0)
+                if tps > 0:
+                    st.metric(
+                        label="⚡ Performance",
+                        value=f"{tps:.1f} tok/s",
+                        delta=f"{last_gen.get('total_tokens', 0)} tokens"
+                    )
+        except:
+            pass  # Performance stats not available
     else:
         st.warning("**No model loaded**")
 
@@ -350,6 +365,17 @@ with tab1:
         if enable_rag:
             st.divider()
             st.subheader("🧠 Knowledge Base Management")
+
+            # MMR Search toggle
+            mmr_col1, mmr_col2 = st.columns([3, 1])
+            with mmr_col1:
+                use_mmr = st.toggle(
+                    "🎯 Use MMR Search (Maximal Marginal Relevance)",
+                    value=True,
+                    help="Better diversity in search results. Reduces redundancy by balancing relevance and diversity."
+                )
+            with mmr_col2:
+                st.caption("✨ Recommended")
 
             rag_col1, rag_col2 = st.columns(2)
 

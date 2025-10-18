@@ -6,6 +6,7 @@ Inspired by chat-with-mlx project (MIT License).
 
 import os
 import tempfile
+import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs
@@ -229,6 +230,34 @@ class RAGManager:
         results = self.vector_store.similarity_search_with_score(query, k=k)
         return results
 
+    def query_mmr(self, query: str, k: int = 4, fetch_k: int = 20, lambda_mult: float = 0.5) -> List[Document]:
+        """
+        Query using Maximal Marginal Relevance (MMR) for diverse results.
+        Balances relevance with diversity to avoid redundant documents.
+        Inspired by mlx-chat-app (MIT License).
+
+        Args:
+            query: Search query
+            k: Number of results to return
+            fetch_k: Number of documents to fetch before MMR filtering
+            lambda_mult: Balance between relevance (1.0) and diversity (0.0). Default 0.5.
+
+        Returns:
+            List of diverse, relevant documents
+        """
+        try:
+            # Use ChromaDB's built-in MMR search if available
+            results = self.vector_store.max_marginal_relevance_search(
+                query,
+                k=k,
+                fetch_k=fetch_k,
+                lambda_mult=lambda_mult
+            )
+            return results
+        except AttributeError:
+            # Fallback to regular similarity search if MMR not available
+            return self.query(query, k=k)
+
     def clear_collection(self) -> Dict[str, Any]:
         """
         Clear all documents from the collection.
@@ -349,6 +378,16 @@ RAG_TOOL_DEFINITIONS = [
                         "type": "integer",
                         "description": "Number of results to return (default: 4)",
                         "default": 4
+                    },
+                    "use_mmr": {
+                        "type": "boolean",
+                        "description": "Use MMR (Maximal Marginal Relevance) for diverse results (default: true)",
+                        "default": True
+                    },
+                    "fetch_k": {
+                        "type": "integer",
+                        "description": "Number of documents to fetch before MMR filtering (default: 20)",
+                        "default": 20
                     }
                 },
                 "required": ["query"]
@@ -405,22 +444,36 @@ def execute_rag_tool(function_name: str, arguments: Dict[str, Any]) -> Dict[str,
         elif function_name == "query_knowledge_base":
             query = arguments.get("query", "")
             k = arguments.get("k", 4)
-            results = rag.query_with_scores(query, k=k)
+            use_mmr = arguments.get("use_mmr", True)
+            fetch_k = arguments.get("fetch_k", 20)
 
-            # Format results
-            formatted_results = []
-            for doc, score in results:
-                formatted_results.append({
-                    "content": doc.page_content,
-                    "score": float(score),
-                    "metadata": doc.metadata
-                })
+            # Use MMR search for better diversity
+            if use_mmr:
+                results = rag.query_mmr(query, k=k, fetch_k=fetch_k)
+                # Format results (no scores with MMR)
+                formatted_results = []
+                for doc in results:
+                    formatted_results.append({
+                        "content": doc.page_content,
+                        "metadata": doc.metadata
+                    })
+            else:
+                # Regular similarity search with scores
+                results = rag.query_with_scores(query, k=k)
+                formatted_results = []
+                for doc, score in results:
+                    formatted_results.append({
+                        "content": doc.page_content,
+                        "score": float(score),
+                        "metadata": doc.metadata
+                    })
 
             return {
                 "success": True,
                 "query": query,
                 "results": formatted_results,
-                "count": len(formatted_results)
+                "count": len(formatted_results),
+                "search_method": "mmr" if use_mmr else "similarity"
             }
 
         elif function_name == "clear_knowledge_base":

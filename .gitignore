@@ -71,3 +71,6 @@ htmlcov/
 
 # ChromaDB vector database
 chroma_db/
+
+# Cloned reference projects
+projects/
