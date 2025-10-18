@@ -20,6 +20,9 @@ from server.tools.financial_data import FINANCIAL_TOOL_DEFINITIONS, execute_fina
 from server.tools.table_formatter import TABLE_FORMATTER_TOOL_DEFINITIONS, execute_table_formatter_tool
 from server.tools.response_formatter import format_response, clean_latex_artifacts
 from server.tools.voice import VOICE_TOOL_DEFINITIONS, execute_voice_tool, speech_to_text, text_to_speech
+from server.tools.rag import RAG_TOOL_DEFINITIONS, execute_rag_tool, get_rag_manager
+from server.tools.registry import REGISTRY
+from server.model_manager import model_manager
 import base64
 import tempfile
 
@@ -316,7 +319,7 @@ with tab1:
             st.session_state.messages = []
 
         # Enable tools with mode selection
-        col1, col2, col3, col4, col5 = st.columns([2, 1, 1, 1, 1])
+        col1, col2, col3, col4, col5, col6 = st.columns([2, 1, 1, 1, 1, 1])
         with col1:
             enable_web_search = st.toggle("🌐 Enable Web Search", value=False,
                                            help="Allow the model to search the web for current information")
@@ -324,12 +327,15 @@ with tab1:
             enable_financial = st.toggle("💰 Real-time Finance", value=False,
                                          help="Real-time stock/crypto prices (accurate!)")
         with col3:
+            enable_rag = st.toggle("🧠 RAG (NEW!)", value=False,
+                                   help="Document & YouTube knowledge base search")
+        with col4:
             enable_voice = st.toggle("🎤 Voice Input", value=False,
                                      help="Record audio or enable text-to-speech")
-        with col4:
+        with col5:
             enable_streaming = st.toggle("⚡ Live Streaming", value=True,
                                          help="See responses being typed in real-time (like ChatGPT)")
-        with col5:
+        with col6:
             if enable_web_search:
                 search_mode = st.selectbox(
                     "Search Mode",
@@ -339,6 +345,73 @@ with tab1:
                 use_enhanced = search_mode == "Enhanced"
             else:
                 use_enhanced = False
+
+        # RAG Knowledge Base Management (if enabled)
+        if enable_rag:
+            st.divider()
+            st.subheader("🧠 Knowledge Base Management")
+
+            rag_col1, rag_col2 = st.columns(2)
+
+            with rag_col1:
+                st.markdown("**📄 Ingest Documents**")
+                uploaded_file = st.file_uploader("Upload PDF, TXT, or MD file", type=['pdf', 'txt', 'md'])
+                if uploaded_file:
+                    if st.button("📥 Ingest File"):
+                        with st.spinner("Processing document..."):
+                            # Save to temp file
+                            temp_path = f"/tmp/{uploaded_file.name}"
+                            with open(temp_path, "wb") as f:
+                                f.write(uploaded_file.getbuffer())
+
+                            # Ingest
+                            result = execute_rag_tool("ingest_document", {"file_path": temp_path})
+                            result_data = json.loads(result) if isinstance(result, str) else result
+
+                            if result_data.get("success"):
+                                st.success(f"✅ {result_data.get('message')}")
+                            else:
+                                st.error(f"❌ {result_data.get('error')}")
+
+                st.markdown("**🎥 Ingest YouTube Video**")
+                youtube_url = st.text_input("YouTube URL", placeholder="https://www.youtube.com/watch?v=...")
+                if youtube_url and st.button("📥 Ingest YouTube"):
+                    with st.spinner("Extracting transcript..."):
+                        result = execute_rag_tool("ingest_youtube", {"youtube_url": youtube_url})
+                        result_data = json.loads(result) if isinstance(result, str) else result
+
+                        if result_data.get("success"):
+                            st.success(f"✅ {result_data.get('message')}")
+                        else:
+                            st.error(f"❌ {result_data.get('error')}")
+
+            with rag_col2:
+                st.markdown("**📊 Knowledge Base Stats**")
+                if st.button("🔄 Refresh Stats"):
+                    result = execute_rag_tool("get_knowledge_base_stats", {})
+                    result_data = json.loads(result) if isinstance(result, str) else result
+
+                    if "error" not in result_data:
+                        st.info(f"""
+                        **Collection:** {result_data.get('collection_name', 'N/A')}
+                        **Documents:** {result_data.get('document_count', 0)}
+                        **Directory:** {result_data.get('persist_directory', 'N/A')}
+                        """)
+                    else:
+                        st.error(result_data.get('error'))
+
+                st.markdown("**🗑️ Clear Knowledge Base**")
+                if st.button("⚠️ Clear All Documents", type="secondary"):
+                    if st.button("✅ Confirm Clear"):
+                        result = execute_rag_tool("clear_knowledge_base", {})
+                        result_data = json.loads(result) if isinstance(result, str) else result
+
+                        if result_data.get("success"):
+                            st.success("✅ Knowledge base cleared")
+                        else:
+                            st.error(result_data.get("error"))
+
+            st.divider()
 
         # Display chat history
         for message in st.session_state.messages:
@@ -401,6 +474,9 @@ with tab1:
                     if enable_financial:
                         selected_tools.extend(FINANCIAL_TOOL_DEFINITIONS)
 
+                    if enable_rag:
+                        selected_tools.extend(RAG_TOOL_DEFINITIONS)
+
                     if enable_voice:
                         selected_tools.extend(VOICE_TOOL_DEFINITIONS)
 
@@ -456,6 +532,8 @@ with tab1:
                                     tool_result = execute_table_formatter_tool(tool_name, tool_args)
                                 elif tool_name in ['speech_to_text', 'text_to_speech']:
                                     tool_result = execute_voice_tool(tool_name, tool_args)
+                                elif tool_name in ['ingest_document', 'ingest_youtube', 'query_knowledge_base', 'clear_knowledge_base', 'get_knowledge_base_stats']:
+                                    tool_result = execute_rag_tool(tool_name, tool_args)
                                 elif use_enhanced:
                                     tool_result = execute_enhanced_tool(tool_name, tool_args)
                                 else:
