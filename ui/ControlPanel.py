@@ -129,22 +129,28 @@ def send_chat_completion(messages, model=None, temperature=0.7, max_tokens=512,
 
         if not has_system:
             # Add system message to guide tool usage
-            system_prompt = """You are a helpful AI assistant. You have access to various tools, but you should ONLY use them when the user's question genuinely requires external information or capabilities.
+            system_prompt = """You are a helpful AI assistant with access to tools. Use tools strategically - not too much, not too little.
 
-**When to use tools:**
-- Web Search: Only when asked about current events, news, real-time information, or facts you don't know
-- Financial Tools: Only when asked about specific stock prices, crypto prices, or market data
-- Voice Tools: Only when user provides audio or asks for audio output
+**NEVER use tools for:**
+- Greetings (hi, hello, how are you) - just respond naturally
+- Simple conversations or casual chat
+- Math you can solve directly
+- Coding or concept explanations
+- General knowledge with high confidence
 
-**When NOT to use tools:**
-- Simple greetings (Hello, Hi, How are you)
-- General knowledge questions you can answer directly
-- Casual conversation
-- Math calculations you can solve
-- Coding questions
-- Explanations of concepts
+**ALWAYS use tools for:**
+- **Stock/crypto questions:** Use get_stock_price or get_crypto_price for ANY stock/crypto query (price, buy/sell, performance). Works with company names (Apple, Tesla) or tickers (AAPL, TSLA). NEVER use web search for stocks/crypto when financial tools are available.
+- **Current/real-time data:** News, weather, current events
+- **Rankings/lists:** Top 10 cities, best countries, comparisons requiring up-to-date data
+- **Specific data requests:** Population, GDP, statistics that need verification
+- **When user explicitly requests a tool feature**
 
-**Be conservative:** If you can answer directly without tools, do so. Tools should be a last resort for information you genuinely don't have."""
+**CRITICAL - Never fabricate data:**
+- If asked for factual data (rankings, statistics, comparisons) and you have web search available, USE IT
+- Do NOT make up numbers or create fake data
+- If unsure about accuracy, search for it
+
+**Default behavior:** For simple questions you're confident about, answer directly. For factual data requests, prefer using web search over guessing."""
 
             enhanced_messages.insert(0, {"role": "system", "content": system_prompt})
 
@@ -506,8 +512,10 @@ with tab1:
                     if enable_voice:
                         selected_tools.extend(VOICE_TOOL_DEFINITIONS)
 
-                    # Always include table formatter for beautiful data display
-                    selected_tools.extend(TABLE_FORMATTER_TOOL_DEFINITIONS)
+                    # Include table formatter only when other tools are enabled
+                    # (web search or financial tools might return tabular data)
+                    if enable_web_search or enable_financial:
+                        selected_tools.extend(TABLE_FORMATTER_TOOL_DEFINITIONS)
 
                     # Use None if no tools selected
                     selected_tools = selected_tools if selected_tools else None
@@ -549,7 +557,20 @@ with tab1:
                             # Execute each tool call
                             for tool_call in message["tool_calls"]:
                                 tool_name = tool_call["function"]["name"]
-                                tool_args = json.loads(tool_call["function"]["arguments"])
+
+                                # Parse tool arguments with error handling
+                                try:
+                                    tool_args = json.loads(tool_call["function"]["arguments"])
+                                except json.JSONDecodeError as e:
+                                    st.error(f"⚠️ Error parsing tool arguments: {e}")
+                                    st.code(f"Raw arguments: {tool_call['function']['arguments'][:200]}...", language="json")
+                                    st.warning("The model generated invalid JSON. This can happen with complex queries. Try rephrasing or simplifying your request.")
+                                    # Skip this tool call and continue
+                                    st.session_state.messages.append({
+                                        "role": "assistant",
+                                        "content": "I encountered an error parsing the tool arguments. Please try rephrasing your question in a simpler way."
+                                    })
+                                    continue
 
                                 # Execute tool based on type
                                 if tool_name in ['get_stock_price', 'get_crypto_price', 'get_stock_history']:

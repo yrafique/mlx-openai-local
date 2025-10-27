@@ -76,7 +76,7 @@ def format_table(data: str, table_type: str = "auto") -> str:
 
 def _format_country_table(countries: List[Dict[str, Any]]) -> str:
     """Format country comparison table with emojis and colors."""
-    table = "## 🌍 Best Countries for Tech Sales Consultants\n\n"
+    table = "## 🌍 Country Comparison\n\n"
     table += "| 🏆 Rank | 🌍 Country | 💰 Annual Income (USD) | 💸 Annual Expenses (USD) | 💵 Annual Savings (USD) | 🎉 Lifestyle | ✨ Why |\n"
     table += "|:-------:|:----------|:----------------------|:-------------------------|:------------------------|:------------|:-------|\n"
 

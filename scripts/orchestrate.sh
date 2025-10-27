@@ -209,10 +209,15 @@ start_api() {
     print_info "Default Model: $DEFAULT_MODEL"
 
     cd "$PROJECT_ROOT"
+    # Convert LOG_LEVEL to lowercase for mlx-omni-server CLI (requires lowercase)
+    # but keep env var uppercase for argmaxtools (requires uppercase)
+    LOG_LEVEL_LOWER=$(echo "$LOG_LEVEL" | tr '[:upper:]' '[:lower:]')
+    # Note: mlx-omni-server loads models dynamically per-request
+    # The DEFAULT_MODEL in .env is used by the UI when making requests
     nohup poetry run mlx-omni-server \
         --host "$API_HOST" \
         --port "$API_PORT" \
-        --log-level "$LOG_LEVEL" \
+        --log-level "$LOG_LEVEL_LOWER" \
         > "$LOG_DIR/$API_LOG_FILE" 2>&1 &
 
     API_PID=$!

@@ -22,12 +22,62 @@ def get_stock_price(symbol: str) -> str:
     - Market status
 
     Args:
-        symbol: Stock ticker symbol (e.g., 'QQQ', 'AAPL', 'TSLA')
+        symbol: Stock ticker symbol OR company name (e.g., 'AAPL', 'Apple', 'Tesla', 'TSLA')
 
     Returns:
         JSON string with current price and details
     """
     try:
+        # Map common company names to ticker symbols
+        company_to_ticker = {
+            'apple': 'AAPL',
+            'microsoft': 'MSFT',
+            'google': 'GOOGL',
+            'alphabet': 'GOOGL',
+            'amazon': 'AMZN',
+            'tesla': 'TSLA',
+            'meta': 'META',
+            'facebook': 'META',
+            'nvidia': 'NVDA',
+            'amd': 'AMD',
+            'intel': 'INTC',
+            'netflix': 'NFLX',
+            'uber': 'UBER',
+            'lyft': 'LYFT',
+            'airbnb': 'ABNB',
+            'coinbase': 'COIN',
+            'paypal': 'PYPL',
+            'visa': 'V',
+            'mastercard': 'MA',
+            'jpmorgan': 'JPM',
+            'jp morgan': 'JPM',
+            'walmart': 'WMT',
+            'target': 'TGT',
+            'disney': 'DIS',
+            'nike': 'NKE',
+            'starbucks': 'SBUX',
+            'mcdonald': 'MCD',
+            'mcdonalds': 'MCD',
+            'boeing': 'BA',
+            'ford': 'F',
+            'gm': 'GM',
+            'general motors': 'GM',
+            'exxon': 'XOM',
+            'chevron': 'CVX',
+            'berkshire': 'BRK.B',
+            'berkshire hathaway': 'BRK.B'
+        }
+
+        # Normalize symbol (lowercase, strip whitespace)
+        normalized = symbol.lower().strip()
+
+        # Check if it's a company name and convert to ticker
+        if normalized in company_to_ticker:
+            symbol = company_to_ticker[normalized]
+            # Note: symbol is now the ticker (e.g., 'AAPL')
+        else:
+            # Keep original symbol (assume it's already a ticker)
+            symbol = symbol.upper().strip()
         # Try multiple free APIs for redundancy
 
         # Method 1: Try Yahoo Finance (no API key needed)
@@ -489,13 +539,13 @@ FINANCIAL_TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "get_stock_price",
-            "description": "Get the current real-time price of a stock or ETF. Use this for accurate, up-to-date financial data instead of web search. Works for US stocks, ETFs like QQQ, SPY, etc.",
+            "description": "Get the current real-time stock price. Use this INSTEAD of web search for ANY stock-related questions (price, buy/sell, performance, etc.). Works with ticker symbols OR company names. Examples: Apple=AAPL, Microsoft=MSFT, Tesla=TSLA, Google=GOOGL, Amazon=AMZN, Nvidia=NVDA, Meta=META.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "symbol": {
                         "type": "string",
-                        "description": "Stock ticker symbol (e.g., 'QQQ', 'AAPL', 'MSFT', 'SPY')"
+                        "description": "Stock ticker symbol OR company name. Examples: 'AAPL' or 'Apple', 'TSLA' or 'Tesla', 'MSFT' or 'Microsoft', 'QQQ', 'SPY'. If user mentions a company name like 'Apple', 'Google', 'Tesla', use the ticker: AAPL, GOOGL, TSLA."
                     }
                 },
                 "required": ["symbol"]

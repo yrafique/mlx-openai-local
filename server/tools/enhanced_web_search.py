@@ -8,7 +8,13 @@ from duckduckgo_search import DDGS
 import json
 import requests
 import os
+import time
+import logging
 from typing import Dict, Any, List
+
+# Setup logging
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def _call_local_llm(prompt: str, max_tokens: int = 500) -> str:
@@ -63,16 +69,47 @@ def search_web_enhanced(query: str, max_results: int = 5) -> str:
     Returns:
         Synthesized answer based on web search results
     """
+    # Ensure max_results is an integer (in case it comes from JSON as string)
     try:
-        # Step 1: Search the web
-        ddgs = DDGS()
-        results = list(ddgs.text(query, max_results=max_results))
+        max_results = int(max_results)
+    except (ValueError, TypeError):
+        max_results = 5
+
+    try:
+        # Step 1: Search the web with retry logic
+        results = []
+        max_retries = 3
+        retry_delay = 1  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Web search attempt {attempt + 1}/{max_retries} for query: {query}")
+                ddgs = DDGS()
+                results = list(ddgs.text(query, max_results=max_results))
+
+                if results:
+                    logger.info(f"Found {len(results)} results for query: {query}")
+                    break
+                else:
+                    logger.warning(f"No results on attempt {attempt + 1} for query: {query}")
+                    if attempt < max_retries - 1:
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+            except Exception as search_error:
+                logger.error(f"Search error on attempt {attempt + 1}: {str(search_error)}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise
 
         if not results:
+            logger.error(f"No results found after {max_retries} attempts for query: {query}")
             return json.dumps({
                 "status": "no_results",
                 "query": query,
-                "answer": f"No web results found for: {query}"
+                "answer": f"No web results found for: {query}. DuckDuckGo may be rate limiting or experiencing issues. Try rephrasing your query or try again in a moment.",
+                "suggestion": "Try making your query more specific or try again in 30 seconds."
             })
 
         # Step 2: Format search results for processing
@@ -120,11 +157,25 @@ Answer:"""
         }, indent=2)
 
     except Exception as e:
+        logger.exception(f"Fatal error in web search for query: {query}")
+        error_message = str(e)
+
+        # Provide helpful error messages for common issues
+        if "rate" in error_message.lower() or "limit" in error_message.lower():
+            helpful_msg = "DuckDuckGo is rate limiting requests. Please wait 30 seconds and try again."
+        elif "timeout" in error_message.lower():
+            helpful_msg = "Search timed out. Please check your internet connection and try again."
+        elif "connection" in error_message.lower():
+            helpful_msg = "Cannot connect to search service. Please check your internet connection."
+        else:
+            helpful_msg = f"Search failed: {error_message}"
+
         return json.dumps({
             "status": "error",
             "query": query,
-            "error": str(e),
-            "answer": f"Search failed: {str(e)}"
+            "error": error_message,
+            "answer": helpful_msg,
+            "suggestion": "Try rephrasing your query or try again in a moment."
         })
 
 
